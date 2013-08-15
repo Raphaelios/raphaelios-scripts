@@ -2,21 +2,62 @@
 set -u
  
 # Setup architectures, library name and other vars + cleanup from previous runs
-ARCHS=("i386" "armv7" "armv7s")
-SDKS=("macosx" "iphoneos" "iphoneos")
+ARCHS=("armv7" "armv7s" "i386")
+SDKS=("iphoneos" "iphoneos" "macosx")
 LIB_NAME="libevent-2.0.21-stable"
-TEMP_LIB_PATH="/tmp/${LIB_NAME}"
-LIB_DEST_DIR="lib"
-HEADER_DEST_DIR="include/libevent"
-rm -rf "${HEADER_DEST_DIR}" "${LIB_DEST_DIR}" "${TEMP_LIB_PATH}*" "${LIB_NAME}"
+
+TEMP_DIR="$(pwd)/tmp"
+TEMP_LIB_PATH="$(pwd)/tmp/${LIB_NAME}"
+
+DEPENDENCIES_DIR="$(pwd)/libevent-dependencies"
+DEPENDENCIES_DIR_LIB="${DEPENDENCIES_DIR}/lib"
+DEPENDENCIES_DIR_HEAD="${DEPENDENCIES_DIR}/include"
+
+PLATFORM_DEPENDENCIES_DIR="${DEPENDENCIES_DIR}/platform"
+
+LIB_DEST_DIR="$(pwd)/libevent-dest-lib"
+HEADER_DEST_DIR="$(pwd)/libevent-dest-include"
+
+PLATFORM_LIBS=("libz.dylib") # Platform specific lib files to be copied for the build 
+PLATFORM_HEADERS=("zlib.h") # Platform specific header files to be copied for the build
+
+rm -rf "${TEMP_LIB_PATH}*" "${LIB_NAME}"
  
+
+###########################################################################
 # Unarchive library, then configure and make for specified architectures
+
+# Copy platform dependency libs and headers
+copy_platform_dependencies()
+{
+   ARCH=$1; SDK_PATH=$2;
+
+   PLATFORM_DEPENDENCIES_DIR_H="${PLATFORM_DEPENDENCIES_DIR}/${ARCH}/include"
+   PLATFORM_DEPENDENCIES_DIR_LIB="${PLATFORM_DEPENDENCIES_DIR}/${ARCH}/lib"
+   mkdir -p "${PLATFORM_DEPENDENCIES_DIR_H}"
+   mkdir -p "${PLATFORM_DEPENDENCIES_DIR_LIB}"
+   
+   for PLIB in "${PLATFORM_LIBS[@]}"; do
+      cp "${SDK_PATH}/usr/lib/$PLIB" "${PLATFORM_DEPENDENCIES_DIR_LIB}"
+   done
+   
+   for PHEAD in "${PLATFORM_HEADERS[@]}"; do
+      cp "${SDK_PATH}/usr/include/$PHEAD" "${PLATFORM_DEPENDENCIES_DIR_H}"   
+   done
+}
+
+# Unarchive, setup temp folder and run ./configure, 'make' and 'make install'
 configure_make()
 {
    ARCH=$1; GCC=$2; SDK_PATH=$3;
    LOG_FILE="${TEMP_LIB_PATH}-${ARCH}.log"
-   tar xfz "${LIB_NAME}.tar";
+   tar xfz "${LIB_NAME}.tar.gz";
+
    pushd .; cd "${LIB_NAME}";
+   
+   copy_platform_dependencies "${ARCH}" "${SDK_PATH}"
+
+   # Configure and make
 
    if [ "${ARCH}" == "i386" ];
    then
@@ -29,16 +70,16 @@ configure_make()
 
    ./configure --disable-shared --enable-static --disable-debug-mode ${HOST_FLAG} \
    --prefix="${TEMP_LIB_PATH}-${ARCH}" \
-   CC="${GCC} -arch ${ARCH}" \
-   CFLAGS="-isysroot ${SDK_PATH}" \
-   CPPLAGS="-isysroot ${SDK_PATH}" &> "${LOG_FILE}"
+   CC="${GCC} " \
+   LDFLAGS="-L${DEPENDENCIES_DIR_LIB}" \
+   CFLAGS=" -arch ${ARCH} -isysroot ${SDK_PATH} -I${DEPENDENCIES_DIR_HEAD}" \
+   CPPLAGS=" -arch ${ARCH} -isysroot ${SDK_PATH} -I${DEPENDENCIES_DIR_HEAD} " &> "${LOG_FILE}"
 
-   make -j2 &> "${LOG_FILE}"; 
-   make install &> "${LOG_FILE}";
+   make -j2 &> "${LOG_FILE}"; make install &> "${LOG_FILE}";
 
    popd; rm -rf "${LIB_NAME}";
 }
-for ((i=0; i < ${#ARCHS[@]}; i++))
+for ((i=0; i < ${#ARCHS[@]}; i++)); 
 do
    SDK_PATH=$(xcrun -sdk ${SDKS[i]} --show-sdk-path)
    GCC=$(xcrun -sdk ${SDKS[i]} -find gcc)
@@ -47,6 +88,7 @@ done
 
 # Combine libraries for different architectures into one
 # Use .a files from the temp directory by providing relative paths
+mkdir -p "${LIB_DEST_DIR}"
 create_lib()
 {
    LIB_SRC=$1; LIB_DST=$2;
@@ -54,13 +96,13 @@ create_lib()
    LIB_PATHS=( "${LIB_PATHS[@]/%//${LIB_SRC}}" )
    lipo ${LIB_PATHS[@]} -create -output "${LIB_DST}"
 }
-mkdir -p "${LIB_DEST_DIR}"
-create_lib "lib/libevent.a" "${LIB_DEST_DIR}/libevent.a"
-create_lib "lib/libevent_core.a" "${LIB_DEST_DIR}/libevent_core.a"
-create_lib "lib/libevent_extra.a" "${LIB_DEST_DIR}/libevent_extra.a"
-create_lib "lib/libevent_pthreads.a" "${LIB_DEST_DIR}/libevent_pthreads.a"
+LIBS=("libevent.a" "libevent_core.a" "libevent_extra.a" "libevent_openssl.a" "libevent_pthreads.a")
+for DEST_LIB in "${LIBS[@]}";
+do
+   create_lib "lib/${DEST_LIB}" "${LIB_DEST_DIR}/${DEST_LIB}"
+done
  
 # Copy header files + final cleanups
 mkdir -p "${HEADER_DEST_DIR}"
 cp -R "${TEMP_LIB_PATH}-${ARCHS[0]}/include" "${HEADER_DEST_DIR}"
-rm -rf "${TEMP_LIB_PATH}-*" "{LIB_NAME}"
+rm -rf "${TEMP_DIR}"
