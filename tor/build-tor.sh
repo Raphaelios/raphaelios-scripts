@@ -65,10 +65,9 @@ apply_patches()
    patch -p3 < "${PATCHES_DIR}/tor-nsenviron.diff"
 }
 
-# Make install puts only certain files to the directory
-# specified by --prefix on ./configure , that's why
-# make install is skipped and the required files are
-# copied manually instead using copy_make_results
+# Make install puts only certain files to the directory specified by 
+# --prefix on ./configure , that's why make install is skipped and the 
+# required files are copied manually instead using copy_make_results
 copy_make_results()
 {
    BUILD_DIR=$1; TEMP_MAKE_DIR=$2;
@@ -111,10 +110,10 @@ configure_make()
    apply_patches "${CURRENT_DIR}/build-patches"
    
    # libz.dylib will be copied over as libz.a to be used successfully by tor's configure
-
    cp "${SDK_PATH}/usr/lib/libz.dylib" "${DEPENDENCIES_DIR_LIB}/libz.a"
    cp "${SDK_PATH}/usr/include/zlib.h" "${DEPENDENCIES_DIR_HEAD}"
 
+   #########################################
    # Configure and make
 
    if [ "${ARCH}" == "i386" ];
