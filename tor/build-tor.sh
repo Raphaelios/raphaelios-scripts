@@ -62,7 +62,7 @@ apply_patches()
    # Patch to remove "_NSGetEnviron()" call not allowed in App Store
    # apps (even fails to compile under iPhoneSDK due to that function
    # being undefined)
-   patch -p3 < "${PATCHES_DIR}/patch-tor-nsenviron.diff"
+   patch -p3 < "${PATCHES_DIR}/patch-tor-ptrace.diff"
 }
 
 # Make install puts only certain files to the directory specified by 
