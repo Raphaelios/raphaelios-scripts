@@ -35,7 +35,7 @@ CURRENT_DIR=$(pwd)
 TEMP_DIR="${CURRENT_DIR}/tmp"
 TEMP_LIB_PATH="${CURRENT_DIR}/tmp/${LIB_NAME}"
 
-DEPENDENCIES_DIR="${CURRENT_DIR}/dependencies"
+DEPENDENCIES_DIR="${CURRENT_DIR}/tor-dependencies"
 DEPENDENCIES_DIR_LIB="${DEPENDENCIES_DIR}/lib"
 DEPENDENCIES_DIR_HEAD="${DEPENDENCIES_DIR}/include"
 
@@ -47,8 +47,8 @@ rm -rf "${TEMP_LIB_PATH}*" "${LIB_NAME}"
 
 # Copy dependencies that are only available for one platform, e.g. sim only
 SDK_PATH_SIM=$(xcrun -sdk macosx --show-sdk-path)
-mkdir -p "${DEPENDENCIES_DIR}/sys/"
-cp -R "${SDK_PATH_SIM}/usr/include/sys/ptrace.h" "${DEPENDENCIES_DIR}/sys/"
+mkdir -p "${DEPENDENCIES_DIR_HEAD}/sys/"
+cp -R "${SDK_PATH_SIM}/usr/include/sys/ptrace.h" "${DEPENDENCIES_DIR_HEAD}/sys/"
 
 # Apply patches to files that break the build
 apply_patches()
@@ -127,17 +127,20 @@ configure_make()
 
    ./configure --enable-static-openssl --enable-static-libevent --enable-static-zlib ${HOST_FLAG} \
    --prefix="${TEMP_LIB_PATH_ARCH}" \
-   --with-openssl-dir="${DEPENDENCIES_DIR}" \
-   --with-libevent-dir="${DEPENDENCIES_DIR}" \
-   --with-zlib-dir="${DEPENDENCIES_DIR}" \
+   --with-openssl-dir="${DEPENDENCIES_DIR_LIB}" \
+   --with-libevent-dir="${DEPENDENCIES_DIR_LIB}" \
+   --with-zlib-dir="${DEPENDENCIES_DIR_LIB}" \
    --disable-asciidoc \
-   CC="${GCC} -L${DEPENDENCIES_DIR}" \
-   CFLAGS="-arch ${ARCH} -isysroot ${SDK_PATH} -I${DEPENDENCIES_DIR} -L${DEPENDENCIES_DIR}" \
-   CPPLAGS="-arch ${ARCH} -isysroot ${SDK_PATH} -I${DEPENDENCIES_DIR} -L${DEPENDENCIES_DIR}" &> "${LOG_FILE}"
+   CC="${GCC}" \
+   LDFLAGS="-L${DEPENDENCIES_DIR_LIB}" \
+   CFLAGS="-arch ${ARCH} -isysroot ${SDK_PATH} -I${DEPENDENCIES_DIR_HEAD}" \
+   CPPLAGS="-arch ${ARCH} -isysroot ${SDK_PATH} -I${DEPENDENCIES_DIR_HEAD}" &> "${LOG_FILE}"
 
    make -j2 &> "${LOG_FILE}"; 
 
    copy_make_results "${TEMP_BUILD_DIR}" "${TEMP_LIB_PATH_ARCH}"
+
+   exit -1
 
    popd; rm -rf "${LIB_NAME}";
 }
