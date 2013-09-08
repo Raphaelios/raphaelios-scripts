@@ -71,25 +71,27 @@ apply_patches()
 copy_make_results()
 {
    BUILD_DIR=$1; TEMP_MAKE_DIR=$2;
+   TEMP_MAKE_DIR_HEAD="${TEMP_MAKE_DIR}/include"
+   TEMP_MAKE_DIR_LIB="${TEMP_MAKE_DIR}/lib"
 
-   mkdir -p "${TEMP_MAKE_DIR}/lib"
-   mkdir -p "${TEMP_MAKE_DIR}/include/common/"
-   mkdir -p "${TEMP_MAKE_DIR}/include/or/"
-   mkdir -p "${TEMP_MAKE_DIR}/include/tools/"
+   mkdir -p "${TEMP_MAKE_DIR_LIB}"
+   mkdir -p "${TEMP_MAKE_DIR_HEAD}/common/"
+   mkdir -p "${TEMP_MAKE_DIR_HEAD}/or/"
+   mkdir -p "${TEMP_MAKE_DIR_HEAD}/tools/"
 
    # Copy the resulted library files
-   cp "${BUILD_DIR}/src/common/libor-crypto.a" "${TEMP_MAKE_DIR}/lib/"
-   cp "${BUILD_DIR}/src/common/libor-event.a" "${TEMP_MAKE_DIR}/lib/"
-   cp "${BUILD_DIR}/src/common/libor.a" "${TEMP_MAKE_DIR}/lib/"
-   cp "${BUILD_DIR}/src/or/libtor.a" "${TEMP_MAKE_DIR}/lib/"
+   cp "${BUILD_DIR}/src/common/libor-crypto.a" "${TEMP_MAKE_DIR_LIB}/"
+   cp "${BUILD_DIR}/src/common/libor-event.a" "${TEMP_MAKE_DIR_LIB}/"
+   cp "${BUILD_DIR}/src/common/libor.a" "${TEMP_MAKE_DIR_LIB}/"
+   cp "${BUILD_DIR}/src/or/libtor.a" "${TEMP_MAKE_DIR_LIB}/"
 
    # Copy the header files
-   cp "${BUILD_DIR}/orconfig.h" "${TEMP_MAKE_DIR}"
+   cp "${BUILD_DIR}/orconfig.h" "${TEMP_MAKE_DIR_HEAD}/"
 
-   find "${BUILD_DIR}/src/common" -name "*.h" -exec cp {} "${TEMP_MAKE_DIR}/include/common/" \;
-   find "${BUILD_DIR}/src/or" -name "*.h" -exec cp {} "${TEMP_MAKE_DIR}/include/or/" \;
-   find "${BUILD_DIR}/src/or" -name "*.i" -exec cp {} "${TEMP_MAKE_DIR}/include/or/" \;
-   find "${BUILD_DIR}/src/tools" -name "*.h" -exec cp {} "${TEMP_MAKE_DIR}/include/tools/" \;
+   find "${BUILD_DIR}/src/common" -name "*.h" -exec cp {} "${TEMP_MAKE_DIR_HEAD}/common/" \;
+   find "${BUILD_DIR}/src/or" -name "*.h" -exec cp {} "${TEMP_MAKE_DIR_HEAD}/or/" \;
+   find "${BUILD_DIR}/src/or" -name "*.i" -exec cp {} "${TEMP_MAKE_DIR_HEAD}/or/" \;
+   find "${BUILD_DIR}/src/tools" -name "*.h" -exec cp {} "${TEMP_MAKE_DIR_HEAD}/tools/" \;
 }
 
 # Unarchive library, then configure and make for specified architectures
@@ -139,8 +141,6 @@ configure_make()
    make -j2 &> "${LOG_FILE}"; 
 
    copy_make_results "${TEMP_BUILD_DIR}" "${TEMP_LIB_PATH_ARCH}"
-
-   exit -1
 
    popd; rm -rf "${LIB_NAME}";
 }
