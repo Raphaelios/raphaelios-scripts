@@ -39,8 +39,10 @@ DEPENDENCIES_DIR="${CURRENT_DIR}/tor-dependencies"
 DEPENDENCIES_DIR_LIB="${DEPENDENCIES_DIR}/lib"
 DEPENDENCIES_DIR_HEAD="${DEPENDENCIES_DIR}/include"
 
-LIB_DEST_DIR="${CURRENT_DIR}/tor-dest-lib"
-HEADER_DEST_DIR="${CURRENT_DIR}/tor-dest-include"
+DEST_DIR="${CURRENT_DIR}/tor-dest"
+LIB_DEST_DIR="${DEST_DIR}/lib"
+HEADER_DEST_DIR="${DEST_DIR}/include"
+RESOURCES_DEST_DIR="${DEST_DIR}/resources"
 
 # Cleanups from previous build
 rm -rf "${TEMP_LIB_PATH}*" "${LIB_NAME}"
@@ -73,11 +75,13 @@ copy_make_results()
    BUILD_DIR=$1; TEMP_MAKE_DIR=$2;
    TEMP_MAKE_DIR_HEAD="${TEMP_MAKE_DIR}/include"
    TEMP_MAKE_DIR_LIB="${TEMP_MAKE_DIR}/lib"
+   TEMP_MAKE_DIR_RES="${TEMP_MAKE_DIR}/resources"
 
    mkdir -p "${TEMP_MAKE_DIR_LIB}"
    mkdir -p "${TEMP_MAKE_DIR_HEAD}/common/"
    mkdir -p "${TEMP_MAKE_DIR_HEAD}/or/"
    mkdir -p "${TEMP_MAKE_DIR_HEAD}/tools/"
+   mkdir -p "${TEMP_MAKE_DIR_RES}"
 
    # Copy the resulted library files
    cp "${BUILD_DIR}/src/common/libor-crypto.a" "${TEMP_MAKE_DIR_LIB}/"
@@ -92,6 +96,11 @@ copy_make_results()
    find "${BUILD_DIR}/src/or" -name "*.h" -exec cp {} "${TEMP_MAKE_DIR_HEAD}/or/" \;
    find "${BUILD_DIR}/src/or" -name "*.i" -exec cp {} "${TEMP_MAKE_DIR_HEAD}/or/" \;
    find "${BUILD_DIR}/src/tools" -name "*.h" -exec cp {} "${TEMP_MAKE_DIR_HEAD}/tools/" \;
+
+   # Copy needed resource/config files
+   cp "${BUILD_DIR}/src/config/geoip" "${TEMP_MAKE_DIR_RES}/"
+   cp "${BUILD_DIR}/src/config/torrc.sample" "${TEMP_MAKE_DIR_RES}/"
+   cp "${BUILD_DIR}/src/or/tor_main.c" "${TEMP_MAKE_DIR_RES}/"
 }
 
 # Unarchive library, then configure and make for specified architectures
@@ -138,7 +147,7 @@ configure_make()
    CFLAGS="-arch ${ARCH} -isysroot ${SDK_PATH} -I${DEPENDENCIES_DIR_HEAD}" \
    CPPLAGS="-arch ${ARCH} -isysroot ${SDK_PATH} -I${DEPENDENCIES_DIR_HEAD}" &> "${LOG_FILE}"
 
-   make -j2 &> "${LOG_FILE}"; 
+   make -j2 &> "${LOG_FILE}";
 
    copy_make_results "${TEMP_BUILD_DIR}" "${TEMP_LIB_PATH_ARCH}"
 
@@ -173,7 +182,13 @@ create_lib "lib/libor-event.a" "${LIB_DEST_DIR}/libor-event.a"
 create_lib "lib/libor.a" "${LIB_DEST_DIR}/libor.a"
 create_lib "lib/libtor.a" "${LIB_DEST_DIR}/libtor.a"
  
-# Copy header files + final cleanups
+# Copy header files
 mkdir -p "${HEADER_DEST_DIR}"
-cp -R "${TEMP_LIB_PATH}-${ARCHS[0]}/include" "${HEADER_DEST_DIR}"
+cp -R "${TEMP_LIB_PATH}-${ARCHS[0]}/include/" "${HEADER_DEST_DIR}"
+
+# Copy resources files
+mkdir -p "${RESOURCES_DEST_DIR}"
+cp -R "${TEMP_LIB_PATH}-${ARCHS[0]}/resources/" "${RESOURCES_DEST_DIR}"
+
+# Final cleanups
 rm -rf "${TEMP_DIR}"
