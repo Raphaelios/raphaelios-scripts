@@ -43,10 +43,9 @@ configure_make()
    pushd .; cd "${LIB_NAME}";
 
    ./Configure BSD-generic32 --openssldir="${TEMP_LIB_PATH}-${ARCH}" &> "${LOG_FILE}"
-   perl -i -pe "s|^CC= gcc|CC= ${GCC} -arch ${ARCH}|g" Makefile
-   perl -i -pe "s|^CFLAG= (.*)|CFLAG= -isysroot ${SDK_PATH} \$1|g" Makefile
    
-   make &> "${LOG_FILE}"; make install &> "${LOG_FILE}";
+   make CC="${GCC} -arch ${ARCH}" CFLAG="-isysroot ${SDK_PATH}" &> "${LOG_FILE}"; 
+   make install &> "${LOG_FILE}";
    popd; rm -rf "${LIB_NAME}";
 }
 for ((i=0; i < ${#ARCHS[@]}; i++))
